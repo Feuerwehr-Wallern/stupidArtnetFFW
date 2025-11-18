@@ -9,7 +9,7 @@ NOTES
 """
 
 import socket
-import _thread
+from threading import Thread
 from time import sleep
 from stupidArtnet.ArtnetUtils import shift_this, put_in_range
 
@@ -43,6 +43,9 @@ class StupidArtnet():
         self.subnet = 0
         self.if_sync = artsync
         self.net = 0
+        self.running = False
+        self.fps = fps
+        self.frame_delay = 1.0 / fps
         self.packet_size = put_in_range(packet_size, 2, 512, even_packet_size)
         self.packet_header = bytearray()
         self.buffer = bytearray(self.packet_size)
@@ -192,23 +195,32 @@ class StupidArtnet():
         self.socket_client.close()
 
     # THREADING #
-
     def start(self):
-        """Starts thread clock."""
-        self.show()
-        if not hasattr(self, "running"):
+        """Start the thread."""
+        if not self.running:
             self.running = True
-        if self.running:
-            sleep((1000.0 / self.fps) / 1000.0)
-            _thread.start_new_thread(self.start, ())
-
+            self.send_thread = Thread(target=self.sender, daemon = True)
+            self.send_thread.start()
 
     def stop(self):
         """Set flag so thread will exit."""
         self.running = False
+        if hasattr(self, "send_thread"):
+            self.send_thread.join()     # wait until the thread terminates
+            del self.send_thread        # delete the thread-object here for reuse
 
+    def sender(self):
+        """ Cyclic sender."""
+        next_frame = time()
+        while self.running:
+            now = time()
+            if now < next_frame:
+                sleep(next_frame - now)
+            self.show()
+            next_frame += self.frame_delay
+
+    
     # SETTERS - HEADER #
-
     def set_universe(self, universe):
         """Setter for universe (0 - 15 / 256).
 
