@@ -44,8 +44,6 @@ class StupidArtnet():
         self.if_sync = artsync
         self.net = 0
         self.running = False
-        self.fps = fps
-        self.frame_delay = 1.0 / fps
         self.packet_size = put_in_range(packet_size, 2, 512, even_packet_size)
         self.packet_header = bytearray()
         self.buffer = bytearray(self.packet_size)
@@ -74,7 +72,7 @@ class StupidArtnet():
 
         # Timer
         self.fps = fps
-        self.__clock = None
+        self.frame_delay = 1.0 / fps
 
         self.make_artdmx_header()
         
